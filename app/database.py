@@ -2,7 +2,7 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Loading environment variables from .env file
 load_dotenv()
 
 # Retrieve database credentials from .env
@@ -25,3 +25,27 @@ def get_db_connection():
     except mysql.connector.Error as e:
         print(f"❌ Database connection failed: {e}")
         return None
+    
+
+# Function to create the users table
+def create_users_table():
+    conn = get_db_connection()  # Create a new database connection
+    if conn:
+        cursor = conn.cursor()
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL
+        );
+        """
+        cursor.execute(create_table_query)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("✅ Users table created (or already exists).")
+    else:
+        print("❌ Could not create users table because the database connection failed.")
+
+# Calling the function when the app starts
+create_users_table()   
