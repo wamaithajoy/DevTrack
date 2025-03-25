@@ -6,13 +6,13 @@ DevTrack is a developer productivity tracker for developers to monitor their pro
 
 ## Features
 
-User Registration & Authentication – Secure login and authentication using JWT.
+User Registration & Authentication – JWT is used for Secure login and authentication.
 
-Project Tracking – Log commits, API requests, errors, and response times.
+Project Tracking – Record commits, API requests, errors, and response times.
 
 Real-Time Updates – Automatically updates tracking data with the latest stats.
 
-Streak Tracking – Keeps a daily streak for consistency and motivation.
+Streak Tracking – Maintains a daily streak for consistency and motivation.
 
 ## Tech Stack
 
@@ -28,6 +28,6 @@ Server: Uvicorn
 
 Add a visual dashboard for tracking progress.
 
-Introduce team collaboration features.
+Implement features for team collaboration.
 
-Implement AI-driven code review insights.
+Implement AI-driven insights for code reviews.
