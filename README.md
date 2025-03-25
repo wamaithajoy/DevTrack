@@ -26,7 +26,7 @@ Server: Uvicorn
 
 ## Future Improvements
 
-Add a visual dahsboard for tracking progress.
+Add a visual dashboard for tracking progress.
 
 Introduce team collaboration features.
 
