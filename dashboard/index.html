@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevTrack Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- 🚀 Sidebar -->
+    <aside class="sidebar">
+<div class="logo-container">
+    <img src="assets/dev-track.png" alt="DevTrack Logo" class="logo">
+</div>
+
+<ul class="menu">
+    <li><i class="fas fa-home"></i><span>Dashboard</span></li>
+    <li><i class="fas fa-file-alt"></i><span>API Logs</span></li>
+    <li class="projects">
+        <i class="fas fa-folder"></i><span>Projects</span> 
+        <i class="fas fa-chevron-down dropdown-arrow"></i>
+        <ul class="dropdown-menu">
+            <li>Project 1</li>
+            <li>Project 2</li>
+            <li>Project 3</li>
+            <li>Project 4</li>
+        </ul>
+    </li>
+
+    <li><i class="fas fa-users"></i><span>Customers</span></li>
+</ul>
+
+<div class="bottom-menu">
+    <li><i class="fas fa-cog"></i><span>Settings</span></li>
+    <li><i class="fas fa-sign-out-alt"></i><span>Logout</span></li>
+</div>
+
+    </aside>
+
+
+
+    <div class="main-content">
+        <!-- Navbar -->
+        <div class="navbar">
+            <div class="nav-left">
+            <input type="text" class="search-bar" placeholder="Search a product...">
+            <div class="date-picker">
+                <input type="date" id="dateInput">
+                <i class="fas fa-calendar-alt" onclick="document.getElementById('dateInput').showPicker();"></i>
+            </div>
+            
+            </div>
+           
+            <div class="nav-right">
+                <div class="streak">
+                    <i class="fas fa-fire"></i> 
+                    <span class="streak-count">7</span>
+                </div>
+                <i class="fas fa-bell notification-icon"></i> 
+            </div>
+            
+            <div class="user-profile">
+                <span class="username">Joy Wamaitha</span>
+                <img src="assets/prof.png" alt="Profile">
+                <div class="dropdown-menu">
+                    <a href="#">Edit Profile</a>
+                    <a href="#">Logout</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Boxes -->
+        <div class="dashboard">
+            <div class="box overview">
+                <h3>Overview</h3>
+                <p>$2,810.00 (+8.26%)</p>
+            </div>
+            <div class="box recent-activity">
+                <h3>Recent Activity</h3>
+                <p>Last updated: 5 min ago</p>
+            </div>
+            <div class="box api-logs">
+                <h3>API Logs</h3>
+                <p>102 API calls today</p>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="box charts">
+                <h3>Charts & Stats</h3>
+                <p>Graphical data visualization</p>
+            </div>
+            <div class="box projects">
+                <h3>Project List</h3>
+                <ul>
+                    <li>Project A</li>
+                    <li>Project B</li>
+                    <li>Project C</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script src="https://kit.fontawesome.com/39607068fa.js" crossorigin="anonymous"></script>
+<script src="/home/user/Desktop/Projects/DevTrack/dashboard/script.js"></script>
+</body>
+
+
+</html>

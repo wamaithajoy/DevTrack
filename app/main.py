@@ -1,10 +1,13 @@
 from fastapi import FastAPI
 from app.database import get_db_connection
+from app.routers import track_routes
 from app.routers import users
 from app.database import create_users_table 
 
+
 app = FastAPI()
 app.include_router(users.router)
+app.include_router(track_routes.router)
 
 @app.get("/")
 def test_db():
@@ -27,6 +30,7 @@ def startup_event():
 # Include routers
 app.include_router(users.router, prefix="/auth", tags=["Authentication"])
 
-@app.get("/")
+@app.get("/status")
 def home():
     return {"message": "DevTrack API is running"}
+

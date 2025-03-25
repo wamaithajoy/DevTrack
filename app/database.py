@@ -49,3 +49,32 @@ def create_users_table():
 
 # Calling the function when the app starts
 create_users_table()   
+
+
+
+# Function to create tracking table
+def create_tracking_table():
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS tracking (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            project_name VARCHAR(255) NOT NULL,
+            commits INT DEFAULT 0,
+            api_requests INT DEFAULT 0,
+            errors INT DEFAULT 0,
+            response_time FLOAT DEFAULT 0,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        """
+        cursor.execute(create_table_query)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("✅ Tracking table created (or already exists).")
+
+# Call the function
+create_tracking_table()
