@@ -4,54 +4,51 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import urllib.parse
 from utils import API_BASE_URL, make_authenticated_request, create_activity_chart, create_error_chart, format_datetime, get_auth_headers, get_github_username, get_commit_count
+from utils import sync_project_commits
 
 def show_dashboard():
     """
     Main dashboard interface that displays all user tracking data.
     This connects to your FastAPI endpoints to show real-time data.
     """
-
+    sync_project_commits()
+    
     # Dashboard header with user info
     col1, col2, col3 = st.columns([2, 1, 1])
-
+    
     with col1:
         st.markdown(f"## Welcome back, {st.session_state.username}! 👋")
         st.markdown("Track your development productivity in real-time")
-
+    
     with col2:
+        # Streak counter (we'll calculate this from data)
         streak_count = get_user_streak()
         st.metric("🔥 Current Streak", f"{streak_count} day")
-
+    
     with col3:
+        # Logout button
         if st.button("🚪 Logout"):
             from auth import logout
             logout()
-
+    
     st.divider()
-
-    # Grab tab state from query params
-    query_params = st.query_params
-    active_tab = query_params.get("tab", ["overview"])[0].lower()
-
-    # Create consistent tab structure
-    tabs = st.tabs(["📊 Overview", "➕ Add Data", "📈 Analytics", "🎯 Projects"])
-
-    if active_tab == "overview":
-        with tabs[0]:
-            show_overview_tab()
-    elif active_tab == "add":
-        with tabs[1]:
-            show_add_data_tab()
-    elif active_tab == "analytics":
-        with tabs[2]:
-            show_analytics_tab()
-    elif active_tab == "projects":
-        with tabs[3]:
-            show_projects_tab()
-    else:
-        with tabs[0]:
-            show_overview_tab()
+    
+    # Main dashboard tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "➕ Add Data", "📈 Analytics", "🎯 Projects"])
+    
+    with tab1:
+        show_overview_tab()
+    
+    with tab2:
+        show_add_data_tab()
+    
+    with tab3:
+        show_analytics_tab()
+    
+    with tab4:
+        show_projects_tab()
 
 
 def show_overview_tab():
@@ -108,12 +105,6 @@ def show_overview_tab():
     st.dataframe(display_df, use_container_width=True)
 
 def show_add_data_tab():
-    # 👇 Redirect to Overview after saving GitHub data
-    if st.session_state.get("redirect_to_overview"):
-        st.session_state["redirect_to_overview"] = False
-        st.experimental_set_query_params(tab="overview")
-        st.rerun()
-
     """
     Form to add new tracking data, either manually or via GitHub integration.
     """
@@ -172,6 +163,8 @@ def show_add_data_tab():
         st.markdown("### 🔗 Connect GitHub and Auto-Fetch Commits")
 
         github_token = st.text_input("🔑 GitHub Personal Access Token", type="password")
+        st.session_state.github_token = github_token
+
 
         # 💡 Add GitHub token instruction here
         st.markdown(
@@ -208,10 +201,8 @@ def show_add_data_tab():
                     success = add_tracking_data(github_data)
 
                     if success:
-                        st.success("Github activity saved!")
+                        st.success("✅ GitHub activity saved!")
                         st.balloons()
-                        
-                        st.query_params["tab"] = "overview"
                         st.rerun()
                     else:
                         st.error("❌ Failed to save GitHub data.")
@@ -357,6 +348,42 @@ def show_projects_tab():
                 st.rerun()
             else:
                 st.error("❌ Failed to update project data. Please try again.")
+    
+    # Delete existing project
+    st.markdown("#### 🗑️ Delete Project")
+
+    with st.form("delete_project_form"):
+        project_to_delete = st.selectbox("Select Project to Delete:", df['project_name'].unique())
+        confirm = st.checkbox("Yes, I'm sure I want to delete this project. This cannot be undone.")
+
+        delete_submitted = st.form_submit_button("🗑️ Delete Project", use_container_width=True)
+
+        if delete_submitted:
+            if not confirm:
+                st.warning("⚠️ Please confirm deletion by checking the box.")
+            else:
+                success = delete_project(project_to_delete)
+                if success:
+                    st.success(f"✅ Project '{project_to_delete}' deleted successfully!")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to delete project. Please try again.")
+
+def delete_project(project_name):
+    try:
+        # Encode the project name for safe URL usage
+        encoded_name = urllib.parse.quote(project_name, safe='')
+        response = make_authenticated_request("DELETE", f"{API_BASE_URL}/tracking/{encoded_name}")
+        
+        if response and response.status_code == 200:
+            return True
+        else:
+            print("Delete failed:", response.status_code, response.text)
+            return False
+    except Exception as e:
+        print("Delete error:", str(e))
+        return False
+
 
 # Helper functions for API calls
 def get_user_tracking_data():
@@ -417,3 +444,4 @@ def get_user_streak():
     # For now, return a simple calculation based on number of projects
     # In production, you'd implement proper streak tracking
     return len(get_user_projects())
+

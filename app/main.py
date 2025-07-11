@@ -45,3 +45,5 @@ app.include_router(users.router, prefix="/auth", tags=["Authentication"])
 def home():
     return {"message": "DevTrack API is running"}
 
+
+

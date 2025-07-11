@@ -390,4 +390,51 @@ def get_commit_count(token, username, since_days=1):
     if r.status_code == 200:
         return r.json().get("total_count", 0)
     return 0
-    
+
+
+def sync_project_commits():
+    """
+    For each tracked project, sync new commits from GitHub
+    and update the backend if there’s a difference.
+    Each project is treated separately.
+    """
+    try:
+        tracking_data = make_authenticated_request("GET", f"{API_BASE_URL}/tracking/")
+        if not tracking_data or tracking_data.status_code != 200:
+            return
+
+        projects = tracking_data.json().get("tracking_data", [])
+
+        github_token = st.session_state.get("github_token", None)
+        if not github_token:
+            return  # If user hasn’t added GitHub token yet
+
+        username = get_github_username(github_token)
+        if not username:
+            return
+
+        for project in projects:
+            project_name = project["project_name"]
+            last_updated_str = project["last_updated"]
+            last_updated = datetime.fromisoformat(last_updated_str.replace("Z", "+00:00"))
+
+            # Get commits since last update
+            since = (datetime.utcnow() - last_updated).days
+            commit_count = get_commit_count(github_token, username, since_days=since + 1)
+
+            # If there's an increase, update backend
+            if commit_count > project["commits"]:
+                delta_commits = commit_count - project["commits"]
+
+                update_data = {
+                    "project_name": project_name,
+                    "commits": commit_count,  # Use latest count
+                    "api_requests": project["api_requests"],
+                    "errors": project["errors"],
+                    "response_time": project["response_time"]
+                }
+
+                make_authenticated_request("PUT", f"{API_BASE_URL}/tracking/", json=update_data)
+
+    except Exception as e:
+        print("❌ Error syncing project commits:", str(e))
