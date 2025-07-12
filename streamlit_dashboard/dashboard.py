@@ -420,7 +420,7 @@ def get_user_projects():
         df = pd.DataFrame(tracking_data)
         return df['project_name'].unique().tolist()
     return []
-    
+
 def get_user_streak():
     """
     Calculate the user's current streak based on actual commit activity.
@@ -434,17 +434,13 @@ def get_user_streak():
 
     df = pd.DataFrame(tracking_data)
 
-    # Convert to datetime and strip time (we only care about date)
     df['last_updated'] = pd.to_datetime(df['last_updated']).dt.date
 
-    # Group by date and sum commits
     commits_by_date = df.groupby('last_updated')['commits'].sum()
 
-    # Create a list of past N days including today
     today = datetime.utcnow().date()
-    days = [today - timedelta(days=i) for i in range(0, 30)]  # Look back 30 days max
+    days = [today - timedelta(days=i) for i in range(0, 30)]
 
-    # Count consecutive days with commits starting from today
     streak = 0
     for day in days:
         if commits_by_date.get(day, 0) > 0:
