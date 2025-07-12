@@ -6,10 +6,18 @@ from app.auth import get_current_user
 from fastapi import APIRouter
 from datetime import datetime, timedelta
 import requests
+from pydantic import BaseModel
+from typing import List
 
 
 
 router = APIRouter(prefix="/tracking", tags=["Tracking"])
+
+class Commit(BaseModel):
+    sha: str
+    date: str  # ISO string, e.g. "2025-07-11T17:34:01Z"
+    message: str
+    files_changed: List[str]  # list of filenames
 
 @router.post("/")
 def add_tracking_data(data: TrackingData, current_user: dict = Depends(get_current_user)):
@@ -26,7 +34,34 @@ def add_tracking_data(data: TrackingData, current_user: dict = Depends(get_curre
         conn.close()
         return {"message": "✅ Tracking data added successfully!"}
     else:
-        raise HTTPException(status_code=500, detail="❌ Database connection failed.")
+        raise HTTPException(status_code=500, detail="❌ Database connection failed.")    
+
+@router.post("/tracking/{project_name}/commits")
+def save_commit_history(project_name: str, commits: List[Commit], user=Depends(get_current_user)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    for commit in commits:
+        try:
+            cursor.execute("""
+                INSERT IGNORE INTO commit_history 
+                (project_name, user_id, commit_sha, commit_date, message, files_changed)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                project_name,
+                user['id'],
+                commit.sha,
+                commit.date,
+                commit.message,
+                ','.join(commit.files_changed)
+            ))
+        except mysql.connector.Error as err:
+            print("MySQL error:", err)
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"status": "ok"}
 
 # 📌 Get tracking data for a user
 @router.get("/")
@@ -61,6 +96,7 @@ def update_tracking_data(data: TrackingData, current_user: dict = Depends(get_cu
         return {"message": "✅ Tracking data updated successfully!"}
     else:
         raise HTTPException(status_code=500, detail="❌ Database connection failed.")
+       
     
 @router.delete("/{project_name}")
 def delete_tracking_data(project_name: str, current_user: dict = Depends(get_current_user)):

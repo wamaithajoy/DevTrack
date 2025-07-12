@@ -6,7 +6,9 @@ from app.routers import users
 from app.database import create_users_table 
 
 
+
 app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,

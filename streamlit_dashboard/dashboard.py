@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import urllib.parse
-from utils import API_BASE_URL, make_authenticated_request, create_activity_chart, create_error_chart, format_datetime, get_auth_headers, get_github_username, get_commit_count
+from utils import API_BASE_URL, make_authenticated_request, create_activity_chart, create_error_chart, format_datetime, get_auth_headers, get_github_username, get_commit_count, get_user_tracking_data
 from utils import sync_project_commits
 
 def show_dashboard():
@@ -13,7 +13,6 @@ def show_dashboard():
     Main dashboard interface that displays all user tracking data.
     This connects to your FastAPI endpoints to show real-time data.
     """
-    sync_project_commits()
     
     # Dashboard header with user info
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -26,6 +25,9 @@ def show_dashboard():
         # Streak counter (we'll calculate this from data)
         streak_count = get_user_streak()
         st.metric("🔥 Current Streak", f"{streak_count} day")
+
+    sync_project_commits()
+
     
     with col3:
         # Logout button
@@ -179,6 +181,8 @@ def show_add_data_tab():
 
         if github_token:
             username = get_github_username(github_token)
+            st.session_state["github_token"] = github_token
+            st.session_state["github_username"] = username
 
             if username:
                 st.success(f"✅ Connected to GitHub as `{username}`")
@@ -186,6 +190,7 @@ def show_add_data_tab():
                 commits_today = get_commit_count(github_token, username)
 
                 st.info(f"📦 You made **{commits_today} commit(s)** in the past 24 hours.")
+
 
                 project_name = st.text_input("Project Name for GitHub Activity", value="GitHub Project")
 
@@ -384,22 +389,6 @@ def delete_project(project_name):
         print("Delete error:", str(e))
         return False
 
-
-# Helper functions for API calls
-def get_user_tracking_data():
-    """
-    Fetch user's tracking data from the API.
-    """
-    try:
-        response = make_authenticated_request("GET", f"{API_BASE_URL}/tracking/")
-        if response and response.status_code == 200:
-            data = response.json()
-            return data.get('tracking_data', [])
-        return []
-    except Exception as e:
-        st.error(f"❌ Error fetching tracking data: {str(e)}")
-        return []
-
 def add_tracking_data(tracking_data):
     """
     Add new tracking data via API.
@@ -431,17 +420,38 @@ def get_user_projects():
         df = pd.DataFrame(tracking_data)
         return df['project_name'].unique().tolist()
     return []
-
+    
 def get_user_streak():
     """
-    Calculate user's current streak (simplified version).
-    In a real implementation, you'd track daily activity.
+    Calculate the user's current streak based on actual commit activity.
+
+    Returns:
+        Integer streak count (consecutive days with at least one commit)
     """
     tracking_data = get_user_tracking_data()
     if not tracking_data:
         return 0
-    
-    # For now, return a simple calculation based on number of projects
-    # In production, you'd implement proper streak tracking
-    return len(get_user_projects())
+
+    df = pd.DataFrame(tracking_data)
+
+    # Convert to datetime and strip time (we only care about date)
+    df['last_updated'] = pd.to_datetime(df['last_updated']).dt.date
+
+    # Group by date and sum commits
+    commits_by_date = df.groupby('last_updated')['commits'].sum()
+
+    # Create a list of past N days including today
+    today = datetime.utcnow().date()
+    days = [today - timedelta(days=i) for i in range(0, 30)]  # Look back 30 days max
+
+    # Count consecutive days with commits starting from today
+    streak = 0
+    for day in days:
+        if commits_by_date.get(day, 0) > 0:
+            streak += 1
+        else:
+            break
+
+    return streak
+
 

@@ -2,6 +2,7 @@ from utils import API_BASE_URL
 import streamlit as st
 from auth import show_login, show_register
 from dashboard import show_dashboard
+
 st.set_page_config(
     page_title="DevTrack Dashboard",
     page_icon="📊",

@@ -391,50 +391,78 @@ def get_commit_count(token, username, since_days=1):
         return r.json().get("total_count", 0)
     return 0
 
-
 def sync_project_commits():
+    github_token = st.session_state.get("github_token")
+    username = st.session_state.get("github_username")
+
+    if not github_token or not username:
+        return
+
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    tracking_data = get_user_tracking_data()
+
+    for item in tracking_data:
+        project_name = item["project_name"]
+        repo_name = project_name  # assuming they match
+
+        url = f"https://api.github.com/repos/{username}/{repo_name}/commits"
+        r = requests.get(url, headers=headers)
+
+        if r.status_code != 200:
+            print(f"⚠️ Failed to fetch commits for {project_name}: {r.status_code}")
+            continue
+
+        commits = r.json()
+        commit_payloads = []
+
+        for commit in commits:
+            sha = commit['sha']
+            date = commit['commit']['author']['date']
+            message = commit['commit']['message']
+
+            # Fetch file list for this commit
+            detail_url = f"https://api.github.com/repos/{username}/{repo_name}/commits/{sha}"
+            detail_resp = requests.get(detail_url, headers=headers)
+            files = []
+
+            if detail_resp.status_code == 200:
+                commit_details = detail_resp.json()
+                files = [f['filename'] for f in commit_details.get('files', [])]
+
+            commit_payloads.append({
+                "sha": sha,
+                "date": date,
+                "message": message,
+                "files_changed": files
+            })
+
+        # Send commit history to backend
+        if commit_payloads:
+            response = make_authenticated_request(
+                "POST",
+                f"{API_BASE_URL}/tracking/{project_name}/commits",
+                json=commit_payloads
+            )
+
+            if not response or response.status_code != 200:
+                print(f"❌ Failed to push commit history for {project_name}")
+
+
+# Helper functions for API calls
+def get_user_tracking_data():
     """
-    For each tracked project, sync new commits from GitHub
-    and update the backend if there’s a difference.
-    Each project is treated separately.
+    Fetch user's tracking data from the API.
     """
     try:
-        tracking_data = make_authenticated_request("GET", f"{API_BASE_URL}/tracking/")
-        if not tracking_data or tracking_data.status_code != 200:
-            return
-
-        projects = tracking_data.json().get("tracking_data", [])
-
-        github_token = st.session_state.get("github_token", None)
-        if not github_token:
-            return  # If user hasn’t added GitHub token yet
-
-        username = get_github_username(github_token)
-        if not username:
-            return
-
-        for project in projects:
-            project_name = project["project_name"]
-            last_updated_str = project["last_updated"]
-            last_updated = datetime.fromisoformat(last_updated_str.replace("Z", "+00:00"))
-
-            # Get commits since last update
-            since = (datetime.utcnow() - last_updated).days
-            commit_count = get_commit_count(github_token, username, since_days=since + 1)
-
-            # If there's an increase, update backend
-            if commit_count > project["commits"]:
-                delta_commits = commit_count - project["commits"]
-
-                update_data = {
-                    "project_name": project_name,
-                    "commits": commit_count,  # Use latest count
-                    "api_requests": project["api_requests"],
-                    "errors": project["errors"],
-                    "response_time": project["response_time"]
-                }
-
-                make_authenticated_request("PUT", f"{API_BASE_URL}/tracking/", json=update_data)
-
+        response = make_authenticated_request("GET", f"{API_BASE_URL}/tracking/")
+        if response and response.status_code == 200:
+            data = response.json()
+            return data.get('tracking_data', [])
+        return []
     except Exception as e:
-        print("❌ Error syncing project commits:", str(e))
+        st.error(f"❌ Error fetching tracking data: {str(e)}")
+        return []
