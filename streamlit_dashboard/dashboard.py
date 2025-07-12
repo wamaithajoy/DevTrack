@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import urllib.parse
+from pytz import timezone
 from utils import API_BASE_URL, make_authenticated_request, create_activity_chart, create_error_chart, format_datetime, get_auth_headers, get_github_username, get_commit_count, get_user_tracking_data
 from utils import sync_project_commits
 
@@ -424,7 +425,6 @@ def get_user_projects():
 def get_user_streak():
     """
     Calculate the user's current streak based on actual commit activity.
-
     Returns:
         Integer streak count (consecutive days with at least one commit)
     """
@@ -434,20 +434,23 @@ def get_user_streak():
 
     df = pd.DataFrame(tracking_data)
 
-    df['last_updated'] = pd.to_datetime(df['last_updated']).dt.date
+    # Convert last_updated to Nairobi timezone
+    ke_tz = timezone("Africa/Nairobi")
+    df['last_updated'] = pd.to_datetime(df['last_updated']).dt.tz_localize('UTC').dt.tz_convert(ke_tz).dt.date
 
+    # Sum commits by date
     commits_by_date = df.groupby('last_updated')['commits'].sum()
 
-    today = datetime.utcnow().date()
-    days = [today - timedelta(days=i) for i in range(0, 30)]
+    # Get today's date in Nairobi timezone
+    today = datetime.now(ke_tz).date()
 
+    # Check streak for last 30 days
     streak = 0
-    for day in days:
+    for i in range(30):
+        day = today - timedelta(days=i)
         if commits_by_date.get(day, 0) > 0:
             streak += 1
         else:
             break
 
     return streak
-
-
